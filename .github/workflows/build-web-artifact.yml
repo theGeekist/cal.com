@@ -37,9 +37,16 @@ jobs:
             .yarn/cache
             **/.turbo/**
           key: yarn-${{ hashFiles('yarn.lock') }}
-
+      # 1) Build atoms (sequential)
+      - name: Build atoms first
+        env:
+          NODE_OPTIONS: --max_old_space_size=8192
+        run: yarn turbo run build --filter=@calcom/atoms
       # Build only web + its deps (no prune)
       - name: Build web (+deps)
+        env:
+          NODE_OPTIONS: --max_old_space_size=8192   # 8 GB heap for node builders
+          TURBO_CONCURRENCY: 2                      # fewer parallel builds = lower peak RAM
         run: yarn turbo run build --filter=@calcom/web...
 
       # Package Next.js standalone output
