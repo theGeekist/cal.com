@@ -38,12 +38,16 @@ jobs:
         working-directory: .out
         run: yarn install
 
-      - name: Turbo prune web
-        run: yarn turbo prune --scope=@calcom/web --out-dir .out
+      - name: Turbo prune
+        run: yarn turbo prune --scope=@calcom/web --scope=@calcom/emails --out-dir .out
       
-      - name: Build web
+      - name: Install pruned deps
         working-directory: .out
-        run: yarn turbo run build --filter=@calcom/web...
+        run: yarn install --immutable || yarn install
+      
+      - name: Build
+        working-directory: .out
+        run: yarn turbo run build
 
       # Package standalone artefact
       - name: Pack artefact
