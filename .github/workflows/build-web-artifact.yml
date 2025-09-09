@@ -8,8 +8,8 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
+    # PUBLIC build-time envs only; secrets stay on VPS
     env:
-      # Only PUBLIC build-time envs; secrets stay on the VPS
       NEXT_PUBLIC_WEBAPP_URL: https://cal.geekist.co
       NEXT_PUBLIC_WEBSITE_URL: https://cal.geekist.co
       NEXT_PUBLIC_CONSOLE_URL: https://cal.geekist.co
@@ -18,34 +18,33 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Setup Node 18 + Corepack
         uses: actions/setup-node@v4
         with:
           node-version: '18'
       - run: corepack enable
-      
-      # Install once at the root just to get turbo available
-      - name: Install root tools
-        run: yarn install --immutable || yarn install
-      
-      # Now prune down to what you actually need
-      - name: Turbo prune
-        run: yarn turbo prune --scope=@calcom/web --scope=@calcom/emails --out-dir .out
-      
-      # Install deps in the pruned tree (this is the one that matters for the build)
-      - name: Install pruned deps
-        working-directory: .out
-        run: yarn install --immutable || yarn install
-      
-      # Build only pruned workspaces
-      - name: Build
-        working-directory: .out
-        run: yarn turbo run build
 
-      # Package standalone artefact
+      # IMPORTANT: do a normal install to avoid YN0028 (lockfile edits forbidden)
+      # We are *not* using --immutable here on purpose.
+      - name: Yarn install
+        run: yarn install
+
+      - name: Cache Yarn
+        uses: actions/cache@v4
+        with:
+          path: |
+            .yarn/cache
+            **/.turbo/**
+          key: yarn-${{ hashFiles('yarn.lock') }}
+
+      # Build only web + its deps (no prune)
+      - name: Build web (+deps)
+        run: yarn turbo run build --filter=@calcom/web...
+
+      # Package Next.js standalone output
       - name: Pack artefact
-        working-directory: .out/apps/web
+        working-directory: apps/web
         run: |
           tar czf /tmp/cal-web.tgz \
             .next/standalone \
