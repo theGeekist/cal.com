@@ -14,10 +14,13 @@ jobs:
       NEXT_PUBLIC_WEBSITE_URL: https://cal.geekist.co
       NEXT_PUBLIC_CONSOLE_URL: https://cal.geekist.co
       NEXT_PUBLIC_EMBED_LIB_URL: https://cal.geekist.co/embed/embed.js
-      NEXTAUTH_URL: https://cal.geekist.co
+      # IMPORTANT: full auth base, not just the domain
+      NEXTAUTH_URL: https://cal.geekist.co/api/auth
       NEXTAUTH_SECRET: ${{ secrets.CI_NEXTAUTH_SECRET }}
-      CALENDSO_ENCRYPTION_KEY: ${{ secrets.CI_CALENDSO_ENCRYPTION_KEY }}      
+      CALENDSO_ENCRYPTION_KEY: ${{ secrets.CI_CALENDSO_ENCRYPTION_KEY }}
       PRISMA_SKIP_GENERATE: true
+      # Turn on Next.js standalone output per your next.config.js
+      BUILD_STANDALONE: "true"
 
     steps:
       - uses: actions/checkout@v4
@@ -58,7 +61,7 @@ jobs:
         run: yarn turbo run build --filter=@calcom/web...
 
       # Package Next.js standalone output
-      - name: Pack artefact
+      - name: Pack artefact (standalone)
         working-directory: apps/web
         run: |
           tar czf /tmp/cal-web.tgz \
