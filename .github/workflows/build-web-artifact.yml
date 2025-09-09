@@ -30,6 +30,14 @@ jobs:
         with:
           node-version: '18'
       - run: corepack enable
+      # ---- RESTORE CACHES *BEFORE* INSTALL ----
+      - name: Restore Yarn cache (Berry tarballs)
+        uses: actions/cache@v4
+        with:
+          path: .yarn/cache
+          key: yarn-${{ runner.os }}-node18-${{ hashFiles('yarn.lock') }}
+          restore-keys: |
+            yarn-${{ runner.os }}-node18-
 
       # IMPORTANT: do a normal install to avoid YN0028 (lockfile edits forbidden)
       # We are *not* using --immutable here on purpose.
