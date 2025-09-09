@@ -38,7 +38,9 @@ jobs:
         working-directory: .out
         run: yarn install
 
-      # Build web
+      - name: Turbo prune web
+        run: yarn turbo prune --scope=@calcom/web --out-dir .out
+      
       - name: Build web
         working-directory: .out
         run: yarn turbo run build --filter=@calcom/web...
