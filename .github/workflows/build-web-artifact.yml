@@ -14,6 +14,9 @@ jobs:
       NEXT_PUBLIC_WEBSITE_URL: https://cal.geekist.co
       NEXT_PUBLIC_CONSOLE_URL: https://cal.geekist.co
       NEXT_PUBLIC_EMBED_LIB_URL: https://cal.geekist.co/embed/embed.js
+      NEXTAUTH_URL: https://cal.geekist.co
+      NEXTAUTH_SECRET: ${{ secrets.CI_NEXTAUTH_SECRET }}
+      CALENDSO_ENCRYPTION_KEY: ${{ secrets.CI_CALENDSO_ENCRYPTION_KEY }}      
       PRISMA_SKIP_GENERATE: true
 
     steps:
