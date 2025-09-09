@@ -60,8 +60,8 @@ jobs:
           NODE_OPTIONS: --max_old_space_size=8192
         run: yarn turbo run build --filter=@calcom/atoms
 
-      - name: Generate Prisma client (dual engines)
-        run: yarn --cwd packages/prisma prisma generate --schema packages/prisma/schema.prisma
+      - name: Generate Prisma client
+        run: yarn prisma generate --schema packages/prisma/schema.prisma
 
       - name: Build web (+deps)
         env:
