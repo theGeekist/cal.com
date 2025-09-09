@@ -38,6 +38,15 @@ jobs:
           key: yarn-${{ runner.os }}-node18-${{ hashFiles('yarn.lock') }}
           restore-keys: |
             yarn-${{ runner.os }}-node18-
+      
+      - name: Restore Turbo cache
+        uses: actions/cache@v4
+        with:
+          path: .turbo
+          key: turbo-${{ runner.os }}-node18-${{ github.ref_name }}-${{ hashFiles('**/*.ts','**/*.tsx','**/package.json','yarn.lock') }}
+          restore-keys: |
+            turbo-${{ runner.os }}-node18-${{ github.ref_name }}-
+            turbo-${{ runner.os }}-node18-
 
       # IMPORTANT: do a normal install to avoid YN0028 (lockfile edits forbidden)
       # We are *not* using --immutable here on purpose.
