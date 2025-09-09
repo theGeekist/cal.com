@@ -26,7 +26,7 @@ jobs:
 
       # Install root deps so we have the repo-pinned turbo
       - name: Install root deps
-        run: yarn install --immutable --immutable-cache
+        run: yarn install --immutable --immutable-cache || yarn install
 
       # Prune repo down to web + deps
       - name: Turbo prune web
