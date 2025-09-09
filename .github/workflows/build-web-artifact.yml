@@ -18,25 +18,27 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-
+      
       - name: Setup Node 18 + Corepack
         uses: actions/setup-node@v4
         with:
           node-version: '18'
       - run: corepack enable
-
-      # Install root deps to get turbo (and ensure all workspaces resolved)
-      - name: Install root deps
-        working-directory: .out
-        run: mkdir .out && yarn install --immutable || yarn install
-
+      
+      # Install once at the root just to get turbo available
+      - name: Install root tools
+        run: yarn install --immutable || yarn install
+      
+      # Now prune down to what you actually need
       - name: Turbo prune
         run: yarn turbo prune --scope=@calcom/web --scope=@calcom/emails --out-dir .out
       
+      # Install deps in the pruned tree (this is the one that matters for the build)
       - name: Install pruned deps
         working-directory: .out
         run: yarn install --immutable || yarn install
       
+      # Build only pruned workspaces
       - name: Build
         working-directory: .out
         run: yarn turbo run build
