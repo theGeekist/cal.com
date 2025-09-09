@@ -27,16 +27,8 @@ jobs:
 
       # Install root deps to get turbo (and ensure all workspaces resolved)
       - name: Install root deps
-        run: yarn install
-
-      # Prune web + its deps (note the ... to include dependent workspaces like @calcom/emails)
-      - name: Turbo prune web + deps
-        run: yarn turbo prune --scope=@calcom/web... --out-dir .out
-
-      # Install deps in pruned tree
-      - name: Install pruned deps
         working-directory: .out
-        run: yarn install
+        run: yarn install --immutable || yarn install
 
       - name: Turbo prune
         run: yarn turbo prune --scope=@calcom/web --scope=@calcom/emails --out-dir .out
