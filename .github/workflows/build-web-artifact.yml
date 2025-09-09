@@ -20,26 +20,31 @@ jobs:
 
       - name: Setup Node 20 + Corepack
         uses: actions/setup-node@v4
-        with: { node-version: '20' }
+        with:
+          node-version: '20'
       - run: corepack enable
 
-      # Cal.com pins Yarn; safer on servers to use node_modules linker
-      - run: yarn config set nodeLinker node-modules
+      # Install root deps so we have the repo-pinned turbo
+      - name: Install root deps
+        working-directory: .out
+        run: yarn install --immutable --immutable-cache
 
-      # Prune monorepo to just web + deps (drastically faster/smaller)
-      - name: Turbo prune (web only)
-        run: npx turbo prune --scope=@calcom/web --out .out
+      # Prune repo down to web + deps
+      - name: Turbo prune web
+        run: yarn turbo prune --scope=@calcom/web --out-dir .out
 
-      - name: Install deps in pruned output
+      # Install only the pruned deps
+      - name: Install pruned deps
         working-directory: .out
         run: yarn install --frozen-lockfile
 
-      - name: Build web (and deps) only
+      # Build web + its deps
+      - name: Build web
         working-directory: .out
-        run: yarn turbo run build --filter='@calcom/web...'
+        run: yarn turbo run build --filter=@calcom/web...
 
-      # Package Next.js standalone runtime
-      - name: Pack standalone artefact
+      # Package standalone artefact
+      - name: Pack artefact
         working-directory: .out/apps/web
         run: |
           tar czf /tmp/cal-web.tgz \
