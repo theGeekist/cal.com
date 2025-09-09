@@ -7,7 +7,6 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-
     env:
       NEXT_PUBLIC_WEBAPP_URL: https://cal.geekist.co
       NEXT_PUBLIC_WEBSITE_URL: https://cal.geekist.co
@@ -16,9 +15,8 @@ jobs:
       NEXTAUTH_URL: https://cal.geekist.co/api/auth
       NEXTAUTH_SECRET: ${{ secrets.CI_NEXTAUTH_SECRET }}
       CALENDSO_ENCRYPTION_KEY: ${{ secrets.CI_CALENDSO_ENCRYPTION_KEY }}
-      PRISMA_SKIP_GENERATE: true
       BUILD_STANDALONE: "true"
-      # Optional: speeds Yarn in CI
+      PRISMA_SKIP_POSTINSTALL_GENERATE: "true"   # <-- stop noisy postinstalls
       YARN_ENABLE_INLINE_BUILDS: "true"
 
     steps:
@@ -30,7 +28,6 @@ jobs:
           node-version: '18'
       - run: corepack enable
 
-      # ---------- CACHES (restore before install; same key used to save) ----------
       - name: Yarn cache (Berry tarballs)
         uses: actions/cache@v4
         with:
@@ -49,19 +46,25 @@ jobs:
             turbo-${{ runner.os }}-node18-${{ github.ref_name }}-
             turbo-${{ runner.os }}-node18-
 
-      # ---------- INSTALL ----------
-      # If your lockfile is now stable, switch to: yarn install --immutable
       - name: Yarn install
         run: yarn install
+        # once stable, switch to: yarn install --immutable
 
-      # ---------- BUILD ----------
       - name: Build atoms first
         env:
           NODE_OPTIONS: --max_old_space_size=8192
         run: yarn turbo run build --filter=@calcom/atoms
 
       - name: Generate Prisma client
-        run: yarn prisma generate --schema packages/prisma/schema.prisma
+        run: |
+          set -e
+          echo "Attempt 1: run from packages/prisma with short schema path"
+          if [ -f packages/prisma/schema.prisma ]; then
+            (cd packages/prisma && yarn prisma generate --schema schema.prisma) && exit 0
+          fi  
+          echo "❌ Could not find schema.prisma in either location"
+          ls -la
+          exit 1
 
       - name: Build web (+deps)
         env:
@@ -69,7 +72,6 @@ jobs:
           TURBO_CONCURRENCY: 2
         run: yarn turbo run build --filter=@calcom/web...
 
-      # ---------- PACKAGE ----------
       - name: Pack artefact (standalone)
         working-directory: apps/web
         run: |
