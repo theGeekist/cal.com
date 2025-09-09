@@ -1,0 +1,57 @@
+name: build-web-artifact
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    # Only PUBLIC build-time envs here; secrets stay on the VPS
+    env:
+      NEXT_PUBLIC_WEBAPP_URL: https://cal.geekist.co
+      NEXT_PUBLIC_WEBSITE_URL: https://cal.geekist.co
+      NEXT_PUBLIC_CONSOLE_URL: https://cal.geekist.co
+      NEXT_PUBLIC_EMBED_LIB_URL: https://cal.geekist.co/embed/embed.js
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node 20 + Corepack
+        uses: actions/setup-node@v4
+        with: { node-version: '20' }
+      - run: corepack enable
+
+      # Cal.com pins Yarn; safer on servers to use node_modules linker
+      - run: yarn config set nodeLinker node-modules
+
+      # Prune monorepo to just web + deps (drastically faster/smaller)
+      - name: Turbo prune (web only)
+        run: npx turbo prune --scope=@calcom/web --out .out
+
+      - name: Install deps in pruned output
+        working-directory: .out
+        run: yarn install --frozen-lockfile
+
+      - name: Build web (and deps) only
+        working-directory: .out
+        run: yarn turbo run build --filter='@calcom/web...'
+
+      # Package Next.js standalone runtime
+      - name: Pack standalone artefact
+        working-directory: .out/apps/web
+        run: |
+          tar czf /tmp/cal-web.tgz \
+            .next/standalone \
+            .next/static \
+            public \
+            next.config.js \
+            package.json
+
+      - name: Upload artefact
+        uses: actions/upload-artifact@v4
+        with:
+          name: cal-web
+          path: /tmp/cal-web.tgz
+          retention-days: 7
