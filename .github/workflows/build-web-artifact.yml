@@ -8,36 +8,37 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
-    # Only PUBLIC build-time envs here; secrets stay on the VPS
     env:
+      # Only PUBLIC build-time envs; secrets stay on the VPS
       NEXT_PUBLIC_WEBAPP_URL: https://cal.geekist.co
       NEXT_PUBLIC_WEBSITE_URL: https://cal.geekist.co
       NEXT_PUBLIC_CONSOLE_URL: https://cal.geekist.co
       NEXT_PUBLIC_EMBED_LIB_URL: https://cal.geekist.co/embed/embed.js
+      PRISMA_SKIP_GENERATE: true
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup Node 20 + Corepack
+      - name: Setup Node 18 + Corepack
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '18'
       - run: corepack enable
 
-      # Install root deps so we have the repo-pinned turbo
+      # Install root deps to get turbo (and ensure all workspaces resolved)
       - name: Install root deps
-        run: yarn install --immutable --immutable-cache || yarn install
+        run: yarn install
 
-      # Prune repo down to web + deps
-      - name: Turbo prune web
-        run: yarn turbo prune --scope=@calcom/web --out-dir .out
+      # Prune web + its deps (note the ... to include dependent workspaces like @calcom/emails)
+      - name: Turbo prune web + deps
+        run: yarn turbo prune --scope=@calcom/web... --out-dir .out
 
-      # Install only the pruned deps
+      # Install deps in pruned tree
       - name: Install pruned deps
         working-directory: .out
-        run: yarn install --frozen-lockfile
+        run: yarn install
 
-      # Build web + its deps
+      # Build web
       - name: Build web
         working-directory: .out
         run: yarn turbo run build --filter=@calcom/web...
