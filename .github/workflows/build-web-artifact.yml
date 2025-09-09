@@ -28,7 +28,7 @@ jobs:
       # Install root deps to get turbo (and ensure all workspaces resolved)
       - name: Install root deps
         working-directory: .out
-        run: yarn install --immutable || yarn install
+        run: mkdir .out && yarn install --immutable || yarn install
 
       - name: Turbo prune
         run: yarn turbo prune --scope=@calcom/web --scope=@calcom/emails --out-dir .out
