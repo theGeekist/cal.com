@@ -8,19 +8,18 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
-    # PUBLIC build-time envs only; secrets stay on VPS
     env:
       NEXT_PUBLIC_WEBAPP_URL: https://cal.geekist.co
       NEXT_PUBLIC_WEBSITE_URL: https://cal.geekist.co
       NEXT_PUBLIC_CONSOLE_URL: https://cal.geekist.co
       NEXT_PUBLIC_EMBED_LIB_URL: https://cal.geekist.co/embed/embed.js
-      # IMPORTANT: full auth base, not just the domain
       NEXTAUTH_URL: https://cal.geekist.co/api/auth
       NEXTAUTH_SECRET: ${{ secrets.CI_NEXTAUTH_SECRET }}
       CALENDSO_ENCRYPTION_KEY: ${{ secrets.CI_CALENDSO_ENCRYPTION_KEY }}
       PRISMA_SKIP_GENERATE: true
-      # Turn on Next.js standalone output per your next.config.js
       BUILD_STANDALONE: "true"
+      # Optional: speeds Yarn in CI
+      YARN_ENABLE_INLINE_BUILDS: "true"
 
     steps:
       - uses: actions/checkout@v4
@@ -30,16 +29,18 @@ jobs:
         with:
           node-version: '18'
       - run: corepack enable
-      # ---- RESTORE CACHES *BEFORE* INSTALL ----
-      - name: Restore Yarn cache (Berry tarballs)
+
+      # ---------- CACHES (restore before install; same key used to save) ----------
+      - name: Yarn cache (Berry tarballs)
         uses: actions/cache@v4
         with:
           path: .yarn/cache
           key: yarn-${{ runner.os }}-node18-${{ hashFiles('yarn.lock') }}
           restore-keys: |
             yarn-${{ runner.os }}-node18-
-      
-      - name: Restore Turbo cache
+            yarn-                        # adopt previously-saved caches like "yarn-<lockhash>"
+
+      - name: Turbo cache
         uses: actions/cache@v4
         with:
           path: .turbo
@@ -48,38 +49,27 @@ jobs:
             turbo-${{ runner.os }}-node18-${{ github.ref_name }}-
             turbo-${{ runner.os }}-node18-
 
-      # IMPORTANT: do a normal install to avoid YN0028 (lockfile edits forbidden)
-      # We are *not* using --immutable here on purpose.
+      # ---------- INSTALL ----------
+      # If your lockfile is now stable, switch to: yarn install --immutable
       - name: Yarn install
         run: yarn install
 
-      - name: Cache Yarn
-        uses: actions/cache@v4
-        with:
-          path: |
-            .yarn/cache
-            **/.turbo/**
-          key: yarn-${{ hashFiles('yarn.lock') }}
-      # 1) Build atoms (sequential)
+      # ---------- BUILD ----------
       - name: Build atoms first
         env:
           NODE_OPTIONS: --max_old_space_size=8192
         run: yarn turbo run build --filter=@calcom/atoms
+
       - name: Generate Prisma client (dual engines)
-        run: |
-          # generate for runner's native (OpenSSL 3) AND your VPS (OpenSSL 1.1)
-          yarn workspace @calcom/prisma prisma generate \
-            --schema packages/prisma/schema.prisma \
-            --binary-targets native \
-            --binary-targets debian-openssl-1.1.x      
-      # 3) Build web + its deps
+        run: yarn --cwd packages/prisma prisma generate --schema packages/prisma/schema.prisma
+
       - name: Build web (+deps)
         env:
-          NODE_OPTIONS: --max_old_space_size=8192   # 8 GB heap for node builders
-          TURBO_CONCURRENCY: 2                      # fewer parallel builds = lower peak RAM
+          NODE_OPTIONS: --max_old_space_size=8192
+          TURBO_CONCURRENCY: 2
         run: yarn turbo run build --filter=@calcom/web...
 
-      # Package Next.js standalone output
+      # ---------- PACKAGE ----------
       - name: Pack artefact (standalone)
         working-directory: apps/web
         run: |
