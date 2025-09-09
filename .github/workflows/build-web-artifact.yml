@@ -42,7 +42,12 @@ jobs:
         env:
           NODE_OPTIONS: --max_old_space_size=8192
         run: yarn turbo run build --filter=@calcom/atoms
-      # Build only web + its deps (no prune)
+      # 2) Build emails (sequential)
+      - name: Build atoms first
+        env:
+          NODE_OPTIONS: --max_old_space_size=8192
+        run: yarn turbo run build --filter=@calcom/emails...        
+      # 3) Build web + its deps
       - name: Build web (+deps)
         env:
           NODE_OPTIONS: --max_old_space_size=8192   # 8 GB heap for node builders
